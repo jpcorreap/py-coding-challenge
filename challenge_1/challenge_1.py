@@ -1,84 +1,109 @@
 # -*- coding: utf-8 -*-
-
-# Calculates all possible discount groups
-BOOK_PRICE = 8
-DISCOUNTS = [0.05, 0.1, 0.2, 0.25]
-DIFFERENT_BOOK_TYPES = 5
-
-# This dictionary contains final prices of a group of different books,
-# for example, a set of 2 different books costs 15.2, a set of 3 costs 30
-final_costs_with_discount = {i: BOOK_PRICE*i*(1-DISCOUNTS[i-2])
-                             for i in range(2, DIFFERENT_BOOK_TYPES + 1)}
-final_costs_with_discount[1] = BOOK_PRICE
+from itertools import permutations
 
 
-def combinate(lst, n):
-    if n == 0:
-        return [[]]
-    l =[]
-    for i in range(0, len(lst)):
-        m = lst[i]
-        remLst = lst[i + 1:]
-        for p in combinate(remLst, n-1):
-            l.append([m]+p)
-    return l
+DISCOUNTS = [0, 0.8, 2.4, 6.4, 10]
 
 
-def are_compatible_groups( group1, group2, histogram ):
-    are_compatible = True
+def get_ocurrences(basket: list) -> dict:
+    """
+    Counts the repetitions of each book in the basket.
 
-    for i in group1:
-        if histogram[i] > 0:
-            histogram[i] -= 1
-        else:
-            are_compatible = False
+    Returns
+    -------
+    dict
+        A dictionary with count of repetitions of each book.
 
-    for j in group2:
-        if histogram[j] > 0:
-            histogram[j] -= 1
-        else:
-            are_compatible = False
+    """
+    # Complexity of O(1) since range is const
+    histogram = {x: 0 for x in range(1, 6)}
 
-    return are_compatible
-
-
-def get_viable_combinations(combinations, histogram):
-    if len(combinations) == 0:
-        return []
-
-    left = combinations[0]
-    right = combinations[1:]
-
-    viable_combination = []
-
-
-def calculate_price(basket: list) -> int:
-    combinations = [ combinate(basket, i) for i in range(DIFFERENT_BOOK_TYPES + 1) ]
-    
-    all_possible_distinct_groups = []
-    for scenario in combinations:
-        for group in scenario:
-            uniques = list(set(group))
-            if len(group) > 0:
-                all_possible_distinct_groups.append(uniques)
-                
-    viable_combinations = []
-    print(all_possible_distinct_groups)
-    
-    # Count ammount of books of each type
-    histogram = { x : 0 for x in set(basket)}
+    # Complexity of O(N)
     for i in basket:
         histogram[i] += 1
-    
-    viable_combinations = get_viable_combinations(all_possible_distinct_groups, histogram)
-        
-    # Look for another set of groups that fits the expectations
-        
-    
-    #for combination in viable_combinations:
-    #    print(combination)
-    return 0
+
+    return histogram
 
 
-calculate_price([1, 2, 3])
-#calculate_price([1, 2])
+def get_discount(matrix: list) -> float:
+    """
+    Calculates the discount for a given matrix of choices
+    """
+    discount = 0
+    group_of = 0
+
+    for j in range(len(matrix[0])):
+        for i in range(0, 5):
+            group_of += matrix[i][j]
+        discount += DISCOUNTS[group_of - 1]
+        group_of = 0
+
+    return discount
+
+
+def calculate_price(basket: list) -> float:
+    # Stores the count for each same book in the basket
+    # O(N) complexity
+    count_by_book = get_ocurrences(basket)
+
+    # Number of books
+    N = len(basket)
+
+    # Max number of repetitions of same book
+    # This determines the length of matrix to work with
+    # O(N) complexity for extracting the values
+    # And then another O(N) to find max value
+    L = max(count_by_book.values())
+
+    # Original binary matrix which represents books in the basket
+    # This allows each row to be a group of distinct books
+    matrix = [[1]*count_by_book[i+1] + [0]*(L-count_by_book[i+1])
+              for i in range(5)]
+
+    # A list for each book with all possible permutations per row
+    # I recognize this must be implemented with a for but it will imply
+    #  a 3D data structure that I do not want to deal with haha
+    # About complexity... I would say this is sadly an O(N!) for each one
+    permutations_b1 = list(set(permutations(matrix[0], L)))
+    permutations_b2 = list(set(permutations(matrix[1], L)))
+    permutations_b3 = list(set(permutations(matrix[2], L)))
+    permutations_b4 = list(set(permutations(matrix[3], L)))
+    permutations_b5 = list(set(permutations(matrix[4], L)))
+
+    # Best discount user can get
+    # This will be used to calculate final price for each combination
+    best_discount = 0
+
+    # This is probably the most horrible part of this algorithm
+    #   ...and hopelly of my entire life as a programmer as well
+    # It looks for every single possible combination of rows and calculates
+    #  discount user will get. The core is to find max discount.
+    # It has a complexity of O(N!^5) since each permutation list
+    #  was calculated with O(N!) and for each list it must iterate
+    #  over another 4 permutaton lists...
+    for first_row in permutations_b1:
+        for second_row in permutations_b2:
+            for third_row in permutations_b3:
+                for fourth_row in permutations_b4:
+                    for fifth_row in permutations_b5:
+                        total_discount = get_discount(
+                            [first_row,
+                             second_row,
+                             third_row,
+                             fourth_row,
+                             fifth_row]
+                        )
+
+                        if total_discount > best_discount:
+                            best_discount = total_discount
+
+    # The original price is 8*number of books
+    # and then it substracts the best discount
+    return (8*N) - best_discount
+
+
+print(calculate_price([1]))  # 8
+print(calculate_price([1, 1, 2, 3, 4, 4, 5, 5]))  # 51.2
+print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5]))  # 55.6
+print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]))  # 60
+print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 1]))  # 68
