@@ -100,10 +100,3 @@ def calculate_price(basket: list) -> float:
     # The original price is 8*number of books
     # and then it substracts the best discount
     return (8*N) - best_discount
-
-
-print(calculate_price([1]))  # 8
-print(calculate_price([1, 1, 2, 3, 4, 4, 5, 5]))  # 51.2
-print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5]))  # 55.6
-print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]))  # 60
-print(calculate_price([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 1]))  # 68
