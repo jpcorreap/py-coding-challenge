@@ -76,8 +76,8 @@ def calculate_price(basket: list) -> float:
 
     # This is probably the most horrible part of this algorithm
     #   ...and hopelly of my entire life as a programmer as well
-    # It looks for every single possible combination of rows and calculates
-    #  discount user will get. The core is to find max discount.
+    # Looks for every possible combination of rows and calculates
+    #  discount of that combination. The idea is to find max discount.
     # It has a complexity of O(N!^5) since each permutation list
     #  was calculated with O(N!) and for each list it must iterate
     #  over another 4 permutaton lists...
