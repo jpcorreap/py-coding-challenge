@@ -1,102 +1,61 @@
 # -*- coding: utf-8 -*-
-from itertools import permutations
+COSTS_WITH_DISCOUNTS = [8, 15.2, 21.6, 25.6, 30]
+DIFFERENT_BOOKS = 5
 
 
-DISCOUNTS = [0, 0.8, 2.4, 6.4, 10]
+def get_initial_matrix(basket):
+    # Counts ammount of each book type.
+    books_count = [0] * DIFFERENT_BOOKS
 
+    # Counts max repetitions of same book.
+    # This will define the length of aux matrix used to check groups.
+    max_repeated_book = 0
 
-def get_ocurrences(basket: list) -> dict:
-    """
-    Counts the repetitions of each book in the basket.
+    # O(N) complexity
+    for book in basket:
+        # Counts the book.
+        books_count[book - 1] += 1
 
-    Returns
-    -------
-    dict
-        A dictionary with count of repetitions of each book.
+        # Look if this type of book has more repetitions than the others.
+        if books_count[book - 1] > max_repeated_book:
+            max_repeated_book = books_count[book - 1]
 
-    """
-    # Complexity of O(1) since range is const
-    histogram = {x: 0 for x in range(1, 6)}
-
-    # Complexity of O(N)
-    for i in basket:
-        histogram[i] += 1
-
-    return histogram
-
-
-def get_discount(matrix: list) -> float:
-    """
-    Calculates the discount for a given matrix of choices
-    """
-    discount = 0
-    group_of = 0
-
-    for j in range(len(matrix[0])):
-        for i in range(0, 5):
-            group_of += matrix[i][j]
-        discount += DISCOUNTS[group_of - 1]
-        group_of = 0
-
-    return discount
+    # O(5) = O(1) complexity
+    return (
+        [[1]*books_count[i] + [0]*(max_repeated_book - books_count[i]) for i in range(5)],
+        max_repeated_book
+    )
 
 
 def calculate_price(basket: list) -> float:
-    # Stores the count for each same book in the basket
+    # Final cost of the basket
+    cost = 0
+
+    # Books will be between 0 and 4 instead of 1 to 5 just for simplicity.
     # O(N) complexity
-    count_by_book = get_ocurrences(basket)
+    matrix, max_repeated_book = get_initial_matrix(basket)
 
-    # Number of books
-    N = len(basket)
+    # Counts distinct books groups than can be arranged.
+    groups_count = [0] * DIFFERENT_BOOKS
 
-    # Max number of repetitions of same book
-    # This determines the length of matrix to work with
-    # O(N) complexity for extracting the values
-    # And then another O(N) to find max value
-    L = max(count_by_book.values())
+    # O(N) complexity, because in worst all books are the same, max_repeated_book = n
+    for j in range(max_repeated_book):
+        distinct_books = 0
 
-    # Original binary matrix which represents books in the basket
-    # This allows each row to be a group of distinct books
-    matrix = [[1]*count_by_book[i+1] + [0]*(L-count_by_book[i+1])
-              for i in range(5)]
+        for i in range(DIFFERENT_BOOKS):
+            distinct_books += matrix[i][j]
 
-    # A list for each book with all possible permutations per row
-    # I recognize this must be implemented with a for but it will imply
-    #  a 3D data structure that I do not want to deal with haha
-    # About complexity... I would say this is sadly an O(N!) for each one
-    permutations_b1 = list(set(permutations(matrix[0], L)))
-    permutations_b2 = list(set(permutations(matrix[1], L)))
-    permutations_b3 = list(set(permutations(matrix[2], L)))
-    permutations_b4 = list(set(permutations(matrix[3], L)))
-    permutations_b5 = list(set(permutations(matrix[4], L)))
+        groups_count[distinct_books - 1] += 1
+        # Unique worth exchange is replacing 5-3 groups for 2 groups of 4.
+        # I recognize this should not been hardcoded like that, but...
+        # work smarter, not harder (?)
+        if groups_count[2] > 0 and groups_count[4] > 0:
+            groups_count[2] -= 1
+            groups_count[4] -= 1
+            groups_count[3] += 2
 
-    # Best discount user can get
-    # This will be used to calculate final price for each combination
-    best_discount = 0
+    # O(5) = O(1) complexity.
+    for i in range(DIFFERENT_BOOKS):
+        cost += COSTS_WITH_DISCOUNTS[i] * groups_count[i]
 
-    # This is probably the most horrible part of this algorithm
-    #   ...and hopelly of my entire life as a programmer as well
-    # Looks for every possible combination of rows and calculates
-    #  discount of that combination. The idea is to find max discount.
-    # It has a complexity of O(N!^5) since each permutation list
-    #  was calculated with O(N!) and for each list it must iterate
-    #  over another 4 permutaton lists...
-    for first_row in permutations_b1:
-        for second_row in permutations_b2:
-            for third_row in permutations_b3:
-                for fourth_row in permutations_b4:
-                    for fifth_row in permutations_b5:
-                        total_discount = get_discount(
-                            [first_row,
-                             second_row,
-                             third_row,
-                             fourth_row,
-                             fifth_row]
-                        )
-
-                        if total_discount > best_discount:
-                            best_discount = total_discount
-
-    # The original price is 8*number of books
-    # and then it substracts the best discount
-    return (8*N) - best_discount
+    return cost
